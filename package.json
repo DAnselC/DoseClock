@@ -1,0 +1,25 @@
+{
+  "name": "doseclock",
+  "version": "1.0.0",
+  "description": "CLOCK IN / CLOCK OUT for DOSE HEALTH",
+  "main": "clock.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DAnselC/DoseClock.git"
+  },
+  "author": "Ansel Colby",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/DAnselC/DoseClock/issues"
+  },
+  "homepage": "https://github.com/DAnselC/DoseClock#readme",
+  "dependencies": {
+    "async": "^2.6.1",
+    "es6-promisify": "^6.0.0",
+    "googleapis": "^24.0.0",
+    "readline-sync": "^1.4.9"
+  }
+}
