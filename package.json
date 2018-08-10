@@ -20,6 +20,7 @@
     "async": "^2.6.1",
     "es6-promisify": "^6.0.0",
     "googleapis": "^24.0.0",
+    "moment": "^2.22.2",
     "readline-sync": "^1.4.9"
   }
 }
