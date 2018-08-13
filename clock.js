@@ -1,7 +1,7 @@
 /*
  Author: Ansel Colby
- Description:
- Date:
+ Description: clocks in and out with google spreadsheets for DOSE HEALTH
+ Date: 08/13/2018
 */
 
 const google = require('googleapis');
@@ -16,6 +16,8 @@ const sheets = google.sheets('v4');
 const getSheet = promisify(sheets.spreadsheets.get);
 const batchUpdate = promisify(sheets.spreadsheets.batchUpdate);
 const append = promisify(sheets.spreadsheets.values.append);
+
+const todaysDate = moment().format('M/D/YYYY');
 const spreadsheetId = '1op-sACqhT7QiT_5y2rZd_4nAY3gTxPIPJvEjSDQ3Kv0';
 const sheetId = '1215706000'; // test
 const sheetName = 'testing'
@@ -28,24 +30,19 @@ async function main() {
   try {
     let auth = await authentication.authenticate();
     let input = await getUserInput();
-    let rows;
 
     if (input.inOrOut === 'i') {
-      await appendTime(auth, input);
-      // rows = await clockIn(rows, input);
+      await clockIn(auth, input);
     } else if (input.inOrOut === 'o') {
-      rows = await getRows(auth);
-      // console.log(rows);
-      rows = await clockOut(rows, input);
-      let res = await updateSheet(auth, rows);
+      let rows = await getRows(auth);
+      rows = await updateRows(rows, input);
+      await clockOut(auth, rows);
     }
+    console.log('d o n e');
   } catch (e) {
     console.log('uh oh there was an error ', e);
     throw new Error('SHIT');
-  } finally {
-    console.log('d o n e');
   }
-
 }
 
 /**
@@ -68,23 +65,22 @@ async function getUserInput() {
 }
 
 /**
- * Appends a rows at the bottom of the new time clock
- * (for clocking in only)
+ * Appends a row at the bottom of the spreadsheet
  */
-async function appendTime(auth, input) {
+async function clockIn(auth, input) {
   console.log('>>> clocking in . . .');
 
   const request = {
     spreadsheetId,
     range: `${sheetName}!A:F`,
     valueInputOption: 'USER_ENTERED',
-    insertDataOption: 'INSERT_ROWS',
+    insertDataOption: 'OVERWRITE',
 
     resource: {
       values: [
       [
         '',
-        moment().format('M/D/YYYY'),
+        todaysDate,
         input.timeclock
       ],
     ]
@@ -120,11 +116,11 @@ async function getRows(auth) {
       console.log('>>>> retrieved row data');
       return rows;
     } else {
-      console.log('No data found');
+      throw new Error('NO DATA FOUND');
     }
 
   } catch (e) {
-    console.error('>>>> The API returned n error: ');
+    console.error('>>>> The API returned an error: ');
     console.log(e);
     return null;
   }
@@ -133,19 +129,64 @@ async function getRows(auth) {
 /**
  *
  */
-async function clockIn(rows, input) {
+async function updateRows(rows, input) {
+  let index = false;
+  for (let i = 0; i < rows.length; i++) {
+    let row = rows[i].values;
+    for (var j = 0; j < row.length; j++) {
+      let cell = row[j];
+      if (cell.formattedValue && (cell.formattedValue === todaysDate)) {
+        index = true;
+        row[j+2].userEnteredValue = {stringValue: input.timeclock};
+        row[j+2].userEnteredFormat.horizontalAlignment = 'RIGHT';
 
-  return rows;
-}
+        let start = moment(row[j+1].formattedValue, 'h:mm A');
+        let end = moment(input.timeclock, 'h:mm A');
+        let diff = Math.abs(start.diff(end, 'hours', 'minutes'));
+        row[j+3].userEnteredValue = {numberValue: diff};
 
-async function clockOut(rows, input) {
+        // console.log(rows[i-1]);
+
+        if (rows[i-1].values[j+4].effectiveFormat.textFormat.bold) {
+          row[j+4].userEnteredValue = {numberValue: parseFloat(diff.toString()).toFixed(2)};
+        } else {
+          row[j+4].userEnteredValue = {numberValue: Number(rows[i-1].values[j+4].formattedValue) + diff};
+        }
+      }
+    }
+  }
+  if (!index) throw new Error("NO CLOCK IN FOUND FOR TODAY'S DATE");
+
   return rows;
 }
 
 /**
  *
  */
-async function updateSheet(auth, rows) {
-  let response = null;
-  return response;
+async function clockOut(auth, rows) {
+  console.log('>>>> updating rows . . .');
+  const request = {
+    auth: auth,
+    spreadsheetId: spreadsheetId,
+    resource: {
+      requests: [{
+        updateCells: {
+          start: {
+            sheetId: sheetId,
+            rowIndex: 4,
+            columnIndex: 0
+          },
+          'fields': '*',
+          rows: rows
+        }
+      }]
+    }
+  };
+
+  try {
+    let res = await batchUpdate(request);
+    console.log('>>>> updated the sheet');
+  } catch (e) {
+    console.log('>>>> The API returned an error: ', e);
+  }
 }
