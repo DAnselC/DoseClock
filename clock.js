@@ -1,7 +1,7 @@
 /*
  Author: Ansel Colby
  Description: clocks in and out with google spreadsheets for DOSE HEALTH
- Date: 08/13/2018
+ Date: 08/13/2018 V 1.0
 */
 
 const google = require('googleapis');
@@ -18,9 +18,10 @@ const batchUpdate = promisify(sheets.spreadsheets.batchUpdate);
 const append = promisify(sheets.spreadsheets.values.append);
 
 const todaysDate = moment().format('M/D/YYYY');
-const spreadsheetId = '1op-sACqhT7QiT_5y2rZd_4nAY3gTxPIPJvEjSDQ3Kv0';
-const sheetId = '1215706000'; // test
-const sheetName = 'testing'
+
+const spreadsheetId = ''; // TODO Put your spreadsheet Id here -> in the url: ...spreadsheets/d/SPREADSHEETID/edit
+const sheetId = ''; // TODO Put your sheet Id here -> in the url: .../edit#gid=SHEETID
+const sheetName = ''; // TODO Put your sheet name here -> the name of the sheet on the tab in the bottom left
 
 
 main();
@@ -133,24 +134,26 @@ async function updateRows(rows, input) {
   let index = false;
   for (let i = 0; i < rows.length; i++) {
     let row = rows[i].values;
-    for (var j = 0; j < row.length; j++) {
-      let cell = row[j];
-      if (cell.formattedValue && (cell.formattedValue === todaysDate)) {
-        index = true;
-        row[j+2].userEnteredValue = {stringValue: input.timeclock};
-        row[j+2].userEnteredFormat.horizontalAlignment = 'RIGHT';
+    if (row) {
+      for (var j = 0; j < row.length; j++) {
+        let cell = row[j];
+        if (cell.formattedValue && (cell.formattedValue === todaysDate)) {
+          index = true;
+          row[j+2].userEnteredValue = {stringValue: input.timeclock};
+          row[j+2].userEnteredFormat.horizontalAlignment = 'RIGHT';
 
-        let start = moment(row[j+1].formattedValue, 'h:mm A');
-        let end = moment(input.timeclock, 'h:mm A');
-        let diff = Math.abs(start.diff(end, 'hours', 'minutes'));
-        row[j+3].userEnteredValue = {numberValue: diff};
+          let start = moment(row[j+1].formattedValue, 'h:mm A');
+          let end = moment(input.timeclock, 'h:mm A');
+          let diff = Math.abs(start.diff(end, 'hours', 'minutes'));
+          row[j+3].userEnteredValue = {numberValue: diff};
 
-        // console.log(rows[i-1]);
+          // console.log(rows[i-1]);
 
-        if (rows[i-1].values[j+4].effectiveFormat.textFormat.bold) {
-          row[j+4].userEnteredValue = {numberValue: parseFloat(diff.toString()).toFixed(2)};
-        } else {
-          row[j+4].userEnteredValue = {numberValue: Number(rows[i-1].values[j+4].formattedValue) + diff};
+          if (rows[i-1].values[j+4].effectiveFormat.textFormat.bold) {
+            row[j+4].userEnteredValue = {numberValue: parseFloat(diff.toString()).toFixed(2)};
+          } else {
+            row[j+4].userEnteredValue = {numberValue: Number(rows[i-1].values[j+4].formattedValue) + diff};
+          }
         }
       }
     }
